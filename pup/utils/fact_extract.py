@@ -10,19 +10,20 @@ from insights.parsers.dmidecode import DMIDecode
 from insights.parsers.cpuinfo import CpuInfo
 from insights.parsers.installed_rpms import InstalledRpms
 from insights.parsers.lsmod import LsMod
+from insights.parsers.ip import IpAddr
 from insights.parsers.meminfo import MemInfo
 from insights.parsers.redhat_release import RedhatRelease
 from insights.parsers.uname import Uname
 from insights.parsers.systemd.unitfiles import UnitFiles
 from insights.parsers.virt_what import VirtWhat
 from insights.specs import Specs
-from insights.util.canonical_facts import get_canonical_facts, IPs
+from insights.util.canonical_facts import get_canonical_facts
 
 logger = logging.getLogger('advisor-pup')
 
 
-@rule(optional=[Specs.hostname, CpuInfo, VirtWhat, MemInfo, IPs, DMIDecode, RedhatRelease, Uname, LsMod, InstalledRpms, UnitFiles])
-def system_profile_facts(hostname, cpu_info, virt_what, meminfo, ips, dmidecode, redhat_release, uname, lsmod, installed_rpms, unit_files):
+@rule(optional=[Specs.hostname, CpuInfo, VirtWhat, MemInfo, IpAddr, DMIDecode, RedhatRelease, Uname, LsMod, InstalledRpms, UnitFiles])
+def system_profile_facts(hostname, cpu_info, virt_what, meminfo, ip_addr, dmidecode, redhat_release, uname, lsmod, installed_rpms, unit_files):
     """
     System Properties:
       hostnames (list of just fqdn for now)
@@ -54,10 +55,19 @@ def system_profile_facts(hostname, cpu_info, virt_what, meminfo, ips, dmidecode,
     metadata_args['infrastructure.type'] = _get_virt_phys_fact(virt_what)
     metadata_args['infrastructure.vendor'] = virt_what.generic if virt_what else None
 
-    if ips:
-        ip_addresses = ipv4_ipv6_addresses(ips.data)
-        metadata_args['infrastructure.ipv4_addresses'] = ip_addresses.get('ipv4')
-        metadata_args['infrastructure.ipv4_addresses'] = ip_addresses.get('ipv6')
+    if ip_addr:
+        network_interfaces = []
+        for iface in ip_addr:
+            # create list of IPs, and then split by ipv4/ipv6
+            ip_addresses = ipv4_ipv6_addresses([a['addr'] for a in iface['addr']])
+            interface_fact = {'name': iface['name'], 'state': iface['state'],
+                              'type': iface['type'], 'mtu': str(iface['mtu']),
+                              'ipv4_addresses': ip_addresses.get('ipv4_addresses'),
+                              'ipv6_addresses': ip_addresses.get('ipv6_addresses')}
+            network_interfaces.append(interface_fact)
+        metadata_args['network.interfaces'] = network_interfaces
+    else:
+        metadata_args['network.interfaces'] = None
 
     metadata_args['bios.vendor'] = dmidecode.bios_vendor if dmidecode else None
     metadata_args['bios.version'] = dmidecode.bios.get('version') if dmidecode else None
