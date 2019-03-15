@@ -47,6 +47,10 @@ def system_profile_facts(hostname, cpu_info, virt_what, meminfo, ips, dmidecode,
       Services
     """
     metadata_args = {}
+    if installed_rpms:
+        metadata_args['installed_packages'] = sorted([str(p[0]) for p in installed_rpms.packages.values()])
+    else:
+        metadata_args['installed_packages'] = None
 
     metadata_args['system_properties.hostnames'] = [_safe_parse(hostname)]
     metadata_args['system_properties.memory_in_gb'] = bytes_to_gb(meminfo.total) if meminfo else None
