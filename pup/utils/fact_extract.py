@@ -63,7 +63,14 @@ def system_profile_facts(hostname, cpu_info, virt_what, meminfo, ips, dmidecode,
     metadata_args['bios.version'] = dmidecode.bios.get('version') if dmidecode else None
     # note that this is a date and not a datetime, hence no full iso8601
     metadata_args['bios.release_date'] = dmidecode.bios_date.isoformat() if dmidecode else None
-    metadata_args['cpu_flags'] = cpu_info.flags if cpu_info else None
+
+    metadata_args['cpu.cpu_flags'] = cpu_info.flags if cpu_info else None
+    metadata_args['cpu.cpu_count'] = cpu_info.cpu_count if cpu_info else None
+    metadata_args['cpu.socket_count'] = cpu_info.socket_count if cpu_info else None
+    if cpu_info.core_total and cpu_info.socket_count:
+        metadata_args['cpu.cores_per_socket'] = cpu_info.core_total // cpu_info.socket_count
+    else:
+        metadata_args['cpu.cores_per_socket'] = None
 
     metadata_args['os.release'] = redhat_release.product if redhat_release else None
     metadata_args['os.kernel_version'] = uname.version if uname else None
