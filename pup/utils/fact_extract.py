@@ -15,14 +15,15 @@ from insights.parsers.redhat_release import RedhatRelease
 from insights.parsers.uname import Uname
 from insights.parsers.systemd.unitfiles import UnitFiles
 from insights.parsers.virt_what import VirtWhat
+from insights.parsers.ps import PsAuxcww
 from insights.specs import Specs
 from insights.util.canonical_facts import get_canonical_facts, IPs
 
 logger = logging.getLogger('advisor-pup')
 
 
-@rule(optional=[Specs.hostname, CpuInfo, VirtWhat, MemInfo, IPs, DMIDecode, RedhatRelease, Uname, LsMod, InstalledRpms, UnitFiles])
-def system_profile_facts(hostname, cpu_info, virt_what, meminfo, ips, dmidecode, redhat_release, uname, lsmod, installed_rpms, unit_files):
+@rule(optional=[Specs.hostname, CpuInfo, VirtWhat, MemInfo, IPs, DMIDecode, RedhatRelease, Uname, LsMod, InstalledRpms, UnitFiles, PsAuxcww])
+def system_profile_facts(hostname, cpu_info, virt_what, meminfo, ips, dmidecode, redhat_release, uname, lsmod, installed_rpms, unit_files, ps_auxcww):
     """
     System Properties:
       hostnames (list of just fqdn for now)
@@ -72,6 +73,8 @@ def system_profile_facts(hostname, cpu_info, virt_what, meminfo, ips, dmidecode,
     metadata_args['os.kernel_modules'] = list(lsmod.data.keys()) if lsmod else []  # convert for json serialization
 
     metadata_args['configuration.services'] = _create_services_fact(unit_files) if unit_files else None
+
+    metadata_args['processes.running'] = list(ps_auxcww.running) if ps_auxcww else None  # convert to list for json serialization
 
     return make_metadata(**metadata_args)
 
